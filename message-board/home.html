@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link href="//fonts.googleapis.com/css?family=PT+Sans" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+</head>
+<style>
+    .v-application {
+        font-family: 'PT Sans', 'sans-serif' !important;
+    }
+
+    .v-textarea {
+        white-space: pre-wrap;
+    }
+</style>
+
+<body>
+    <div id="app" v-if="chrome">
+        <v-app>
+            <v-main>
+                <v-col>
+                    <v-navigation-drawer v-model="drawer" :mini-variant.sync="mini" permanent fixed>
+                        <v-list-item class="px-2">
+                            <v-list-item-avatar color="white">
+                                <v-img :src="userAvatarURL">
+                                </v-img>
+                            </v-list-item-avatar>
+                            <v-list-item-title class="ml-2"><strong>{{username}}</strong></v-list-item-title>
+                            <v-btn icon @click.stop="mini = !mini">
+                                <v-icon>mdi-chevron-left</v-icon>
+                            </v-btn>
+                        </v-list-item>
+                        <v-list-item class="px-2">
+                            <v-tooltip v-if="!$vuetify.theme.dark">
+                                <template v-slot:activator="{ on }">
+                                    <v-btn v-on="on" color="secondary" depressed small fab @click="darkMode">
+                                        <v-icon class="mr-1">mdi-moon-waxing-crescent</v-icon>
+                                    </v-btn>
+                                </template>
+                                <span>Dark Mode On</span>
+                            </v-tooltip>
+
+                            <v-tooltip v-else>
+                                <template v-slot:activator="{ on }">
+                                    <v-btn v-on="on" color="secondary" small fab @click="darkMode">
+                                        <v-icon color="yellow">mdi-white-balance-sunny</v-icon>
+                                    </v-btn>
+                                </template>
+                                <span>Dark Mode Off</span>
+                            </v-tooltip>
+                            <v-list-item-title class="ml-6">View Mode</v-list-item-title>
+                        </v-list-item>
+
+
+
+                        <v-list>
+                            <v-list-item dark class="green lighten-1" @click="dialog = true">
+                                <v-list-item-icon>
+                                    <v-icon>mdi-feather</v-icon>
+                                </v-list-item-icon>
+
+                                <v-list-item-content>
+                                    <v-list-item-title>New Post</v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                            <v-list-item link @click="logout()">
+                                <v-list-item-icon>
+                                    <v-icon>mdi-logout</v-icon>
+                                </v-list-item-icon>
+
+                                <v-list-item-content>
+                                    <v-list-item-title>Logout</v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                        </v-list>
+                    </v-navigation-drawer>
+                </v-col>
+                <v-col>
+                    <v-card v-for="(message, index) in messages" :key="index" class="mx-auto mt-4" max-width="621">
+                        <v-card-text class="h6 d-flex justify-end pr-8">
+                            {{ convertEpochToSpecificTimezone(message.time) }}
+                        </v-card-text>
+                        <v-card-text class="subtitle-1 pt-6 px-8 font-weight-bold">
+                            <p>
+                                <span v-html="message.content.replace(/(?:\r|\n|\r\n)/g, '<br>')"></span>
+                            </p>
+                        </v-card-text>
+
+                        <v-card-actions>
+                            <v-list-item class="grow">
+                                <v-list-item-avatar color="white">
+                                    <v-img :src="message.avatar">
+                                    </v-img>
+                                </v-list-item-avatar>
+
+                                <v-list-item-content>
+                                    <v-list-item-title><strong>{{ message.author }}</strong></v-list-item-title>
+                                </v-list-item-content>
+                                <v-icon large class="mb-2 mr-2" @click="toggleThread(index)">
+                                    mdi-message-reply-text
+                                </v-icon>
+                            </v-list-item>
+                        </v-card-actions>
+                        <template v-if="message.showThread">
+                            <v-card-text>
+                                <v-row class="ml-8">
+                                    <v-col cols="11">
+                                        <v-textarea auto-grow rows="1" v-model="reply" color="green" solo
+                                            style="max-height: 350px; overflow-y: scroll; overflow-x: hidden;"
+                                            :append-outer-icon="isReplyValid ? 'mdi-send' : 'mdi-dots-vertical'" filled
+                                            clear-icon="mdi-close-circle" clearable label="Reply" type="text"
+                                            @click:append-outer="sendMessage(index)" @click:clear="clearMessage"
+                                            v-on:keypress.enter.exact="sendMessage(index)">
+                                        </v-textarea>
+                                    </v-col>
+                                </v-row>
+                                <div v-if="message.replies.length > 0">
+                                    <v-row>
+                                        <v-icon class="ml-12 mb-2" @click="refreshThread(index)">mdi-refresh-circle
+                                        </v-icon>
+                                    </v-row>
+                                    <v-list three-line :id="'msg-thread'+index"
+                                        style="height: 400px; overflow-y: scroll; overflow-x: hidden;">
+                                        <template v-for="(reply, index) in message.replies">
+                                            <v-list-item>
+                                                <v-list-item-avatar color="white">
+                                                    <v-img
+                                                        :src="'https://avatars.dicebear.com/api/identicon/'+reply.from+'.svg?mood[]=happy'">
+                                                    </v-img>
+                                                </v-list-item-avatar>
+
+                                                <v-list-item-content>
+                                                    <v-list-item-title>
+                                                        <strong>{{ reply.from }}</strong>
+                                                        &nbsp;&nbsp;
+                                                        <p class="text--disabled">
+                                                            {{ convertEpochToSpecificTimezone(reply.time) }}</p>
+                                                    </v-list-item-title>
+                                                    <div v-html="reply.content.replace(/(?:\r|\n|\r\n)/g, '<br>')">
+                                                    </div>
+                                                </v-list-item-content>
+                                            </v-list-item>
+                                        </template>
+                                    </v-list>
+                                </div>
+                            </v-card-text>
+                        </template>
+                    </v-card>
+                </v-col>
+                <v-snackbar v-model="snackbar" transition="fade-transition" color="green" right top timeout="2500">
+                    Hi {{ username }}!
+                </v-snackbar>
+                <v-dialog persistent v-model="dialog" width="600px" transition="fade-transition">
+                    <v-card>
+                        <v-card-actions class="d-flex justify-end">
+                            <v-icon class="ma-2" large @click="dialog = false">mdi-close-box</v-icon>
+                        </v-card-actions>
+
+                        <v-card-text style="max-height: 550px; overflow-y: scroll;">
+                            <v-textarea v-model="post" solo auto-grow rows="10" label="Share your thoughts...">
+                            </v-textarea>
+                        </v-card-text>
+
+                        <v-card-actions class="d-flex justify-end">
+                            <v-btn dark color="blue lighten-2 ma-6" @click="newPost">Post</v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+            </v-main>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            data: function () {
+                return {
+                    chrome: false,
+                    snackbar: true,
+                    username: "",
+                    drawer: true,
+                    mini: false,
+                    dialog: false,
+
+                    reply: '',
+                    isReplyValid: false,
+                    isPostValid: false,
+                    sentMsg: false,
+                    post: '',
+                    messages: [],
+                };
+            },
+            mounted: async function () {
+                var ua = navigator.userAgent.toLowerCase();
+                if (ua.indexOf('safari') != -1) {
+                    if (ua.indexOf('chrome') > -1) {
+                        this.chrome = true;
+                    } else {
+                        this.chrome = false;
+                        alert("Please use Chrome browser to experience full features")
+                    }
+                }
+
+                var name = "sid-cdsaTGUxdw-e312" + "=";
+                var ca = document.cookie.split(';');
+                var sid = "";
+                for (var i = 0; i < ca.length; i++) {
+                    var c = ca[i];
+                    while (c.charAt(0) == ' ') c = c.substring(1);
+                    if (c.indexOf(name) == 0) sid = c.substring(name.length, c.length);
+                }
+                let resp = await fetch(`/api/username?sid=${sid}`);
+                let json = await resp.json();
+                this.username = json.username;
+
+                let msgs = await fetch(`/api/messages`)
+                json = await msgs.json();
+                for (var i = 0; i < json.length; i++) {
+                    this.messages.push({
+                        showThread: false,
+                        avatar: `https://avatars.dicebear.com/api/identicon/${json[i].author}.svg?mood[]=happy`,
+                        replies: json[i].replies,
+                        author: json[i].author,
+                        content: json[i].content,
+                        time: json[i].time
+                    })
+                }
+            },
+            methods: {
+                logout() {
+                    window.location.replace("/logout");
+                },
+                newPost() {
+                    if (!this.isPostValid) {
+                        return;
+                    }
+
+                    let data = {
+                        author: this.username,
+                        content: this.post,
+                        replies: []
+                    }
+                    this.clearPost();
+
+                    fetch("/api/message", {
+                        method: 'POST',
+                        body: JSON.stringify(data),
+                        headers: {
+                            'Content-Type': 'application/json; charset=utf-8',
+                        },
+                        mode: 'cors'
+                    }).then(res => {
+
+                        fetch("/api/messages", {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json; charset=utf-8',
+                            },
+                            mode: 'cors'
+                        }).then(res => {
+                            return res.json();
+                        }).then(async result => {
+                            this.messages = []
+                            for (var i = 0; i < result.length; i++) {
+                                this.messages.push({
+                                    showThread: false,
+                                    avatar: `https://avatars.dicebear.com/api/identicon/${result[i].author}.svg?mood[]=happy`,
+                                    replies: result[i].replies,
+                                    author: result[i].author,
+                                    content: result[i].content,
+                                    time: result[i].time
+                                })
+                            }
+                            this.dialog = false;
+                        });
+                    });
+                },
+                sendMessage(index) {
+                    if (!this.isReplyValid) {
+                        if (this.reply.length >= 1) {
+                            this.reply = this.reply.slice(0, -1);
+                        } else {
+                            this.sentMsg = true;
+                        }
+                        return;
+                    }
+                    let data = {
+                        from: this.username,
+                        content: this.reply,
+                    }
+                    this.sentMsg = true;
+                    this.clearMessage();
+
+                    const url = `/api/reply?msgid=${index}`;
+                    fetch(url, {
+                        method: 'POST',
+                        body: JSON.stringify(data),
+                        headers: {
+                            'Content-Type': 'application/json; charset=utf-8',
+                        },
+                        mode: 'cors'
+                    }).then(res => {
+
+                        fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json; charset=utf-8',
+                            },
+                            mode: 'cors'
+                        }).then(res => {
+                            return res.json();
+                        }).then(async result => {
+                            this.messages[index].replies = result;
+                            var scrollContainer = document.getElementById('msg-thread' + index);
+                            function sleep(ms) {
+                                return new Promise(resolve => setTimeout(resolve, ms));
+                            }
+                            await sleep(50);
+                            scrollContainer.scrollTo({
+                                top: scrollContainer.scrollHeight,
+                                left: 0,
+                                behavior: 'smooth'
+                            });
+                        });
+                    });
+
+                },
+                refreshThread(index) {
+                    const url = `/api/reply?msgid=${index}`;
+                    fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json; charset=utf-8',
+                        },
+                        mode: 'cors'
+                    }).then(res => {
+                        return res.json();
+                    }).then(async result => {
+                        this.messages[index].replies = result;
+                        var scrollContainer = document.getElementById('msg-thread' + index);
+                        function sleep(ms) {
+                            return new Promise(resolve => setTimeout(resolve, ms));
+                        }
+                        await sleep(50);
+                        scrollContainer.scrollTo({
+                            top: scrollContainer.scrollHeight,
+                            left: 0,
+                            behavior: 'smooth'
+                        });
+                    });
+                },
+                clearPost() {
+                    this.post = '';
+                    this.isPostValid = false;
+                },
+                clearMessage() {
+                    this.reply = '';
+                    this.isReplyValid = false;
+                },
+                toggleThread(index) {
+                    this.messages[index].showThread = !this.messages[index].showThread;
+                },
+                darkMode() {
+                    this.$vuetify.theme.dark = !this.$vuetify.theme.dark;
+                },
+                convertEpochToSpecificTimezone(epoch) {
+                    var d = new Date(epoch * 1000);
+                    d.setSeconds(0, 0);
+                    var isoNow = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+                    return stamp = isoNow.replace(/T/, " ").replace(/:00.000Z/, "");
+                }
+            },
+            watch: {
+                reply: async function () {
+                    if (!this.reply) return;
+                    function sleep(ms) {
+                        return new Promise(resolve => setTimeout(resolve, ms));
+                    }
+                    if (this.sentMsg && (this.reply === '\n' || this.reply === '\r' || this.reply === '\r\n')) {
+                        await sleep(10);
+                        this.sentMsg = false;
+                        this.clearMessage();
+                        return;
+                    }
+                    let check = this.reply.replace(/(\r\n|\n|\r)/gm, '');
+                    check = check.replace(/\s/g, '');
+                    this.isReplyValid = check.length > 0;
+                },
+                post: async function () {
+                    if (!this.post) return;
+                    let check = this.post.replace(/(\r\n|\n|\r)/gm, '');
+                    check = check.replace(/\s/g, '');
+                    this.isPostValid = check.length > 0;
+                }
+            },
+            computed: {
+                userAvatarURL: function () {
+                    return `https://avatars.dicebear.com/api/identicon/${this.username}.svg?mood[]=happy`;
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>

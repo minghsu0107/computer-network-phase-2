@@ -25,15 +25,17 @@ type reply struct {
 	Time    int64  `json:"time"`
 }
 type rawMessage struct {
-	Author  string  `json:"author"`
-	Content string  `json:"content"`
-	Replies []reply `json:"replies"`
+	Author   string  `json:"author"`
+	Content  string  `json:"content"`
+	Markdown bool    `json:"markdown"`
+	Replies  []reply `json:"replies"`
 }
 type message struct {
-	Author  string  `json:"author"`
-	Content string  `json:"content"`
-	Time    int64   `json:"time"`
-	Replies []reply `json:"replies"`
+	Author   string  `json:"author"`
+	Content  string  `json:"content"`
+	Markdown bool    `json:"markdown"`
+	Time     int64   `json:"time"`
+	Replies  []reply `json:"replies"`
 }
 
 func handle(conn net.Conn, req request) error {
@@ -256,10 +258,11 @@ func handle(conn net.Conn, req request) error {
 		res := rawMessage{}
 		json.Unmarshal([]byte(req.Body[0:l]), &res)
 		final := message{
-			Author:  res.Author,
-			Content: res.Content,
-			Time:    time.Now().Unix(),
-			Replies: res.Replies,
+			Author:   res.Author,
+			Content:  res.Content,
+			Markdown: res.Markdown,
+			Time:     time.Now().Unix(),
+			Replies:  res.Replies,
 		}
 		v, _ := json.Marshal(final)
 		rdb.RPush(ctx, "msgdata", string(v))

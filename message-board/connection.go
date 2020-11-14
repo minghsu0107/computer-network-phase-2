@@ -8,7 +8,7 @@ import (
 
 func handleConnection(conn net.Conn) error {
 	defer conn.Close()
-	requestStr := make([]byte, 3000)
+	requestStr := make([]byte, 30000)
 	_, err := conn.Read(requestStr)
 	if err != nil {
 		log.Print("failed to read request contents")

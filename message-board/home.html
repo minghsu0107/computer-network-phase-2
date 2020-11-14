@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <base target="_blank" />
     <meta charset="UTF-8">
     <link href="//fonts.googleapis.com/css?family=PT+Sans" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
@@ -15,6 +16,11 @@
 
     .v-textarea {
         white-space: pre-wrap;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
     }
 </style>
 
@@ -85,8 +91,9 @@
                             {{ convertEpochToSpecificTimezone(message.time) }}
                         </v-card-text>
                         <v-card-text class="subtitle-1 px-8 font-weight-bold">
-                            <p>
-                                <span v-html="message.content.replace(/(?:\r|\n|\r\n)/g, '<br>')"></span>
+                            <p style="line-height: 30px;">
+                                <span v-if="message.markdown" v-html="render(message.content)"></span>
+                                <span v-else v-html="message.content.replace(/(?:\r|\n|\r\n)/g, '<br>')"></span>
                             </p>
                         </v-card-text>
 
@@ -155,17 +162,33 @@
                 <v-snackbar v-model="snackbar" transition="fade-transition" color="green" right top timeout="2500">
                     Hi {{ username }}!
                 </v-snackbar>
-                <v-dialog persistent v-model="dialog" width="600px" transition="fade-transition">
+                <v-dialog persistent v-model="dialog" :width="useMarkdown ? '90%' : 600" transition="fade-transition">
                     <v-card>
                         <v-card-actions class="d-flex justify-end">
+                            <v-switch class="ma-2 mr-12" v-model="useMarkdown" label="markdown" color="indigo darken-3"
+                                hide-details>
+                            </v-switch>
+                            </v-switch>
                             <v-icon class="ma-2" large @click="dialog = false">mdi-close-box</v-icon>
                         </v-card-actions>
-
-                        <v-card-text style="max-height: 550px; overflow-y: scroll;">
-                            <v-textarea v-model="post" solo auto-grow rows="10" label="Share your thoughts...">
-                            </v-textarea>
-                        </v-card-text>
-
+                        <div v-if="!useMarkdown">
+                            <v-card-text style="max-height: 550px; overflow-y: scroll;">
+                                <v-textarea v-model="post" solo auto-grow rows="10" label="Share your thoughts...">
+                                </v-textarea>
+                            </v-card-text>
+                        </div>
+                        <div v-else>
+                            <v-row class="px-6" cols="12">
+                                <v-col cols="6">
+                                    <v-textarea v-model="post" flat auto-grow rows="15">
+                                    </v-textarea>
+                                </v-col>
+                                <v-col cols="6">
+                                    <div v-html="markdownPreview">
+                                    </div>
+                                </v-col>
+                            </v-row>
+                        </div>
                         <v-card-actions class="d-flex justify-end">
                             <v-btn dark color="blue lighten-2 ma-6" @click="newPost">Post</v-btn>
                         </v-card-actions>
@@ -177,6 +200,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.0.2/markdown-it.min.js"
+        integrity="sha512-7VN0JcGJWL+i8LXzTvbROqUSPzZIu8Fp6GWpkVwtHwrgWwY8CrbZgyHA2YpNhAASQNrYqGYoI2HusCqV+S2xnQ=="
+        crossorigin="anonymous"></script>
+    <script>
+        var md = window.markdownit();
+    </script>
     <script>
         new Vue({
             el: '#app',
@@ -195,6 +224,7 @@
                     isPostValid: false,
                     sentMsg: false,
                     post: '',
+                    useMarkdown: false,
                     messages: [],
                 };
             },
@@ -230,11 +260,15 @@
                         replies: json[i].replies,
                         author: json[i].author,
                         content: json[i].content,
-                        time: json[i].time
+                        time: json[i].time,
+                        markdown: json[i].markdown
                     })
                 }
             },
             methods: {
+                render(content) {
+                    return md.render(content)
+                },
                 focusReply(index) {
                     for (let i = 0; i < this.messages.length; i++) {
                         if (i != index) {
@@ -256,6 +290,7 @@
                     let data = {
                         author: this.username,
                         content: this.post,
+                        markdown: this.useMarkdown,
                         replies: []
                     }
                     this.clearPost();
@@ -286,10 +321,17 @@
                                     replies: result[i].replies,
                                     author: result[i].author,
                                     content: result[i].content,
-                                    time: result[i].time
+                                    time: result[i].time,
+
+                                    markdown: result[i].markdown
                                 })
                             }
                             this.dialog = false;
+                            function sleep(ms) {
+                                return new Promise(resolve => setTimeout(resolve, ms));
+                            }
+                            await sleep(50);
+                            window.scrollTo(0, document.body.scrollHeight);
                         });
                     });
                 },
@@ -419,6 +461,9 @@
             computed: {
                 userAvatarURL: function () {
                     return `https://avatars.dicebear.com/api/identicon/${this.username}.svg?mood[]=happy`;
+                },
+                markdownPreview: function () {
+                    return md.render(this.post);
                 }
             }
         })

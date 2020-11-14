@@ -84,7 +84,7 @@
                         <v-card-text class="h6 d-flex justify-end pr-8">
                             {{ convertEpochToSpecificTimezone(message.time) }}
                         </v-card-text>
-                        <v-card-text class="subtitle-1 pt-6 px-8 font-weight-bold">
+                        <v-card-text class="subtitle-1 px-8 font-weight-bold">
                             <p>
                                 <span v-html="message.content.replace(/(?:\r|\n|\r\n)/g, '<br>')"></span>
                             </p>
@@ -111,10 +111,11 @@
                                     <v-col cols="11">
                                         <v-textarea auto-grow rows="1" v-model="reply" color="green" solo
                                             style="max-height: 350px; overflow-y: scroll; overflow-x: hidden;"
-                                            :append-outer-icon="isReplyValid ? 'mdi-send' : 'mdi-dots-vertical'" filled
-                                            clear-icon="mdi-close-circle" clearable label="Reply" type="text"
+                                            :append-outer-icon="isReplyValid && reply.length > 0 ? 'mdi-send' : 'mdi-dots-vertical'"
+                                            filled clear-icon="mdi-close-circle" clearable label="Reply" type="text"
                                             @click:append-outer="sendMessage(index)" @click:clear="clearMessage"
-                                            v-on:keypress.enter.exact="sendMessage(index)">
+                                            v-on:keypress.enter.exact="sendMessage(index)"
+                                            v-on:keypress="focusReply(index)">
                                         </v-textarea>
                                     </v-col>
                                 </v-row>
@@ -195,6 +196,8 @@
                     sentMsg: false,
                     post: '',
                     messages: [],
+
+                    curMessageIndex: 0,
                 };
             },
             mounted: async function () {
@@ -234,10 +237,20 @@
                 }
             },
             methods: {
+                focusReply(index) {
+                    for (let i = 0; i < this.messages.length; i++) {
+                        if (i != index) {
+                            this.messages[i].showThread = false;
+                        }
+                    }
+                },
                 logout() {
                     window.location.replace("/logout");
                 },
                 newPost() {
+                    if (!this.post.length) {
+                        return;
+                    }
                     if (!this.isPostValid) {
                         return;
                     }
@@ -283,6 +296,10 @@
                     });
                 },
                 sendMessage(index) {
+                    if (!this.reply.length) {
+                        this.sentMsg = true;
+                        return;
+                    }
                     if (!this.isReplyValid) {
                         if (this.reply.length >= 1) {
                             this.reply = this.reply.slice(0, -1);
@@ -366,6 +383,7 @@
                 },
                 toggleThread(index) {
                     this.messages[index].showThread = !this.messages[index].showThread;
+                    this.clearMessage();
                 },
                 darkMode() {
                     this.$vuetify.theme.dark = !this.$vuetify.theme.dark;

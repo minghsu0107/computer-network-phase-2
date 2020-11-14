@@ -22,6 +22,12 @@
         max-width: 100%;
         height: auto;
     }
+
+    .sticky {
+        position: fixed;
+        top: 0;
+        z-index: 2;
+    }
 </style>
 
 <body>
@@ -29,7 +35,8 @@
         <v-app>
             <v-main>
                 <v-col>
-                    <v-navigation-drawer v-model="drawer" :mini-variant.sync="mini" permanent fixed>
+                    <v-navigation-drawer v-model="drawer" :mini-variant.sync="mini"
+                        :permanent="$vuetify.breakpoint.mdAndUp" fixed>
                         <v-list-item class="px-2">
                             <v-list-item-avatar color="white">
                                 <v-img :src="userAvatarURL">
@@ -84,6 +91,10 @@
                             </v-list-item>
                         </v-list>
                     </v-navigation-drawer>
+                    <v-toolbar fixed floating class="hidden-md-and-up sticky">
+                        <v-app-bar-nav-icon @click.stop="drawer = !drawer">
+                        </v-app-bar-nav-icon>
+                    </v-toolbar>
                 </v-col>
                 <v-col>
                     <v-card v-for="(message, index) in messages" :key="index" class="mx-auto mt-4" max-width="621">

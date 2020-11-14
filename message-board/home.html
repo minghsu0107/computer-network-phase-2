@@ -196,8 +196,6 @@
                     sentMsg: false,
                     post: '',
                     messages: [],
-
-                    curMessageIndex: 0,
                 };
             },
             mounted: async function () {
@@ -382,8 +380,8 @@
                     this.isReplyValid = false;
                 },
                 toggleThread(index) {
-                    this.messages[index].showThread = !this.messages[index].showThread;
                     this.clearMessage();
+                    this.messages[index].showThread = !this.messages[index].showThread;
                 },
                 darkMode() {
                     this.$vuetify.theme.dark = !this.$vuetify.theme.dark;

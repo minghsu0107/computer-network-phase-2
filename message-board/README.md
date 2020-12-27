@@ -4,4 +4,4 @@
 docker-compose up
 ```
 
-Browse `localhost:8080` and you can see the application up and running.
+Browse `localhost:8000` and you can see the application up and running.

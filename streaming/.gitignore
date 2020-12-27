@@ -1,0 +1,11 @@
+.gohls
+.DS_Store
+.sass-cache
+/build
+ui/src/build
+node_modules
+videos
+buildinfo.go
+rice-box.go
+LOCAL_NOTES.txt
+gohls-config.json
